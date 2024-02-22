@@ -20,7 +20,7 @@ int main () {
 	if (server_sockfd == -1) {
 		exit_error("socket");
 	}
-	std::cout << "SUCCESS: socket" << std::endl;
+	std::cout << "SUCCESS: socket: " << server_sockfd << std::endl;
 
 	struct sockaddr_in server_addr;
 	server_addr.sin_family = AF_INET;
@@ -46,7 +46,7 @@ int main () {
 			close(server_sockfd);
 			exit_error("accept");
 		}
-		std::cout << "SUCCESS: connection" << std::endl;
+		std::cout << "SUCCESS: connection: " << client_sockfd << std::endl;
 
 		while (1) {
 			char recv_msg[BUF_SIZE];

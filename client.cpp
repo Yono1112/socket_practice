@@ -21,7 +21,7 @@ int main() {
 	if (client_sockfd == -1) {
 		exit_error("socket");
 	}
-	std::cout << "SUCCESS: socket" << std::endl;
+	std::cout << "SUCCESS: socket: " << client_sockfd << std::endl;
 
 	struct sockaddr_in client_addr;
 	client_addr.sin_family = AF_INET;
@@ -55,6 +55,7 @@ int main() {
 			std::cout << "finish connection" << std::endl;
 			break ;
 		}
+		std::cout << "message from server: " << recv_msg << std::endl;
 	}
 
 	close(client_sockfd);
