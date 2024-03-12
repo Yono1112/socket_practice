@@ -49,7 +49,7 @@ int main () {
 		std::cout << "SUCCESS: connection: " << client_sockfd << std::endl;
 
 		while (1) {
-			char recv_msg[BUF_SIZE];
+			char recv_msg[BUF_SIZE] = {0};
 			ssize_t recv_size = recv(client_sockfd, &recv_msg, BUF_SIZE, 0);
 			if (recv_size == -1) {
 				close(client_sockfd);
@@ -62,8 +62,8 @@ int main () {
 
 			std::cout << "message from client: \"" << recv_msg << "\"" << std::endl;
 
-			char send_msg[BUF_SIZE] = "server received your message";
-			int send_size = send(client_sockfd, &send_msg, std::strlen(send_msg), 0);
+			// char send_msg[BUF_SIZE] = "server received your message";
+			int send_size = send(client_sockfd, &recv_msg, std::strlen(recv_msg), 0);
 			if (send_size == -1) {
 				std::cerr << "ERROR: send" << std::endl;
 				break ;
