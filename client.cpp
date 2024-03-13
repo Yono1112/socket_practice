@@ -45,7 +45,7 @@ int main() {
 			std::cerr << "ERROR: send" << std::endl;
 			break ;
 		}
-		
+
 		char recv_msg[BUF_SIZE] = {0};
 		ssize_t recv_size = recv(client_sockfd, &recv_msg, BUF_SIZE, 0);
 		if (recv_size == -1) {

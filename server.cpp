@@ -3,6 +3,8 @@
 #include <arpa/inet.h>
 #include <string>
 #include <unistd.h>
+#include <poll.h>
+#include <vector>
 
 #define PORT 8080
 #define SERVER_IP "127.0.0.1"
@@ -38,38 +40,69 @@ int main () {
 	}
 	std::cout << "SUCCESS: listen" << std::endl;
 
+	std::vector<struct pollfd> vec;
+	struct pollfd server_pollfd;
+	server_pollfd.fd = server_sockfd;
+	server_pollfd.events = POLLIN;
+	server_pollfd.revents = 0;
+	vec.push_back(server_pollfd);
+
 	while (1) {
-		struct sockaddr_in client_addr;
-		socklen_t client_addr_len = sizeof(client_addr);
-		int client_sockfd = accept(server_sockfd, (struct sockaddr *)&client_addr, &client_addr_len);
-		if (client_sockfd == -1) {
+		int ret = poll(vec.data(), static_cast<nfds_t>(vec.size()), -1);
+		if (ret == -1) {
 			close(server_sockfd);
-			exit_error("accept");
+			exit_error("poll");
 		}
-		std::cout << "SUCCESS: connection: " << client_sockfd << std::endl;
 
-		while (1) {
-			char recv_msg[BUF_SIZE] = {0};
-			ssize_t recv_size = recv(client_sockfd, &recv_msg, BUF_SIZE, 0);
-			if (recv_size == -1) {
-				close(client_sockfd);
-				close(server_sockfd);
-				exit_error("recv");
-			} else if (recv_size == 0) {
-				std::cout << "finish connection" << std::endl;
-				break ;
-			}
+		std::cout << "poll ret: " << ret << std::endl;
+		for (std::size_t i = 0; i < vec.size(); ++i) {
+			if (vec[i].revents & POLLIN) {
+				// std::cout << "i: " << i << ", revents: " << vec[i].revents << std::endl;
+				// sleep(3);
+				if (vec[i].fd == server_sockfd) {
+					struct sockaddr_in client_addr;
+					struct pollfd client_pollfd;
+					socklen_t client_addr_len = sizeof(client_addr);
+					client_pollfd.fd = accept(server_sockfd, (struct sockaddr *)&client_addr, &client_addr_len);
+					if (client_pollfd.fd == -1) {
+						close(server_sockfd);
+						exit_error("accept");
+					}
+					// std::cout << "SUCCESS: connection: " << client_pollfd.fd << std::endl;
+					client_pollfd.events = POLLIN;
+					client_pollfd.revents = 0;
+					vec.push_back(client_pollfd);
+				} else {
+					while (1) {
+						char recv_msg[BUF_SIZE] = {0};
+						ssize_t recv_size = recv(vec[i].fd, &recv_msg, BUF_SIZE, MSG_DONTWAIT);
+						if (recv_size == -1) {
+								if (errno == EAGAIN) {
+									break ;
+								}
+							close(vec[i].fd);
+							close(server_sockfd);
+							exit_error("recv");
+						} else if (recv_size == 0) {
+							// std::cout << "finish connection from client[" << vec[i].fd << "]" << std::endl;
+							break ;
+						}
 
-			std::cout << "message from client: \"" << recv_msg << "\"" << std::endl;
+						std::cout << "message from client_fd[" << vec[i].fd << "]: \"" << recv_msg << "\"" << std::endl;
 
-			// char send_msg[BUF_SIZE] = "server received your message";
-			int send_size = send(client_sockfd, &recv_msg, std::strlen(recv_msg), 0);
-			if (send_size == -1) {
-				std::cerr << "ERROR: send" << std::endl;
-				break ;
+						// char send_msg[BUF_SIZE] = "server received your message";
+						int send_size = send(vec[i].fd, &recv_msg, std::strlen(recv_msg), MSG_DONTWAIT);
+						if (send_size == -1) {
+								if (errno == EAGAIN) {
+									break ;
+								}
+							std::cerr << "ERROR: send" << std::endl;
+							break ;
+						}
+					}
+				}
 			}
 		}
-		close(client_sockfd);
 	}
 	close(server_sockfd);
 	return 0;
